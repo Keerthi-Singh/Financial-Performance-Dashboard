@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Test script to verify the Financial Performance Dashboard functionality.
-This script tests all the core functions without running the Streamlit app.
+Financial Performance Dashboard - Streamlit App
+This is a simplified version of the dashboard for testing and demonstration.
 """
 
+import streamlit as st
 import sys
 import os
 sys.path.append('src')
@@ -13,112 +14,118 @@ from analyser import (
     expense_breakdown, cost_driver_by_department, get_summary_stats
 )
 
-def test_data_loading():
-    """Test data loading functionality."""
-    print("🧪 Testing data loading...")
-    
-    df = load_data()
-    if df is not None and not df.empty:
-        print(f"✅ Data loaded successfully: {len(df):,} records")
-        print(f"   Date range: {df['Date'].min()} to {df['Date'].max()}")
-        print(f"   Regions: {', '.join(df['Region'].unique())}")
-        print(f"   Departments: {', '.join(df['Department'].unique())}")
-        return df
-    else:
-        print("❌ Data loading failed")
-        return None
-
-def test_filtering(df):
-    """Test data filtering functionality."""
-    print("\n🧪 Testing data filtering...")
-    
-    # Test date filtering
-    filtered_df = filter_data(df, start_date='2022-01-01', end_date='2022-12-31')
-    print(f"✅ Date filtering: {len(filtered_df):,} records (2022 only)")
-    
-    # Test region filtering
-    filtered_df = filter_data(df, regions=['North America'])
-    print(f"✅ Region filtering: {len(filtered_df):,} records (North America only)")
-    
-    # Test department filtering
-    filtered_df = filter_data(df, departments=['Sales'])
-    print(f"✅ Department filtering: {len(filtered_df):,} records (Sales only)")
-    
-    # Test combined filtering
-    filtered_df = filter_data(
-        df, 
-        start_date='2022-06-01', 
-        end_date='2022-08-31',
-        regions=['Europe'],
-        departments=['Marketing', 'R&D']
-    )
-    print(f"✅ Combined filtering: {len(filtered_df):,} records (Summer 2022, Europe, Marketing+R&D)")
-
-def test_kpi_calculation(df):
-    """Test KPI calculation functionality."""
-    print("\n🧪 Testing KPI calculations...")
-    
-    kpis = compute_kpis(df)
-    print(f"✅ Total Revenue: ${kpis['total_revenue']:,.2f}")
-    print(f"✅ Total Expenses: ${kpis['total_expenses']:,.2f}")
-    print(f"✅ Net Profit: ${kpis['net_profit']:,.2f}")
-    print(f"✅ Profit Margin: {kpis['profit_margin']:.1f}%")
-
-def test_chart_generation(df):
-    """Test chart generation functionality."""
-    print("\n🧪 Testing chart generation...")
-    
-    # Test revenue timeseries
-    revenue_chart = revenue_timeseries(df)
-    if revenue_chart is not None:
-        print("✅ Revenue timeseries chart generated")
-    
-    # Test expense breakdown
-    expense_chart = expense_breakdown(df)
-    if expense_chart is not None:
-        print("✅ Expense breakdown chart generated")
-    
-    # Test cost driver chart
-    cost_chart = cost_driver_by_department(df)
-    if cost_chart is not None:
-        print("✅ Cost driver chart generated")
-
-def test_summary_statistics(df):
-    """Test summary statistics functionality."""
-    print("\n🧪 Testing summary statistics...")
-    
-    summary_stats = get_summary_stats(df)
-    if summary_stats:
-        print("✅ Region statistics generated")
-        print("✅ Department statistics generated")
-        print(f"   Sample - North America Revenue: ${summary_stats['region_stats'].loc['North America', 'Revenue']:,.2f}")
+# Page configuration
+st.set_page_config(
+    page_title="Financial Dashboard - Test Version",
+    page_icon="📊",
+    layout="wide"
+)
 
 def main():
-    """Run all tests."""
-    print("🚀 Financial Performance Dashboard - Test Suite")
-    print("=" * 50)
+    st.title("Financial Performance Dashboard - Test Version")
+    st.write("This is a simplified dashboard for testing the core functionality.")
     
-    # Test data loading
-    df = test_data_loading()
+    # Load data
+    with st.spinner("Loading data..."):
+        df = load_data()
+    
     if df is None:
-        print("❌ Cannot proceed with tests - data loading failed")
-        return
+        st.error("❌ Data not found! Please run `python generate_data.py` first.")
+        st.stop()
     
-    # Test all functionality
-    test_filtering(df)
-    test_kpi_calculation(df)
-    test_chart_generation(df)
-    test_summary_statistics(df)
+    st.success(f"✅ Data loaded successfully: {len(df):,} records")
     
-    print("\n" + "=" * 50)
-    print("🎉 All tests completed successfully!")
-    print("\n📋 Dashboard Features Verified:")
-    print("   ✅ Data loading and parsing")
-    print("   ✅ Date, region, and department filtering")
-    print("   ✅ KPI calculations (Revenue, Expenses, Profit, Margin)")
-    print("   ✅ Chart generation (Timeseries, Pie, Stacked Bar)")
-    print("   ✅ Summary statistics by region and department")
-    print("\n🚀 Ready to run: streamlit run src/app.py")
+    # Display basic info
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Records", f"{len(df):,}")
+    with col2:
+        st.metric("Date Range", f"{df['Date'].min().strftime('%Y-%m-%d')} to {df['Date'].max().strftime('%Y-%m-%d')}")
+    with col3:
+        st.metric("Regions", len(df['Region'].unique()))
+    
+    # Simple filters
+    st.subheader("Quick Filters")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        selected_regions = st.multiselect(
+            "Select Regions",
+            options=df['Region'].unique(),
+            default=df['Region'].unique()
+        )
+    
+    with col2:
+        selected_departments = st.multiselect(
+            "Select Departments",
+            options=df['Department'].unique(),
+            default=df['Department'].unique()
+        )
+    
+    # Filter data
+    filtered_df = filter_data(df, regions=selected_regions, departments=selected_departments)
+    
+    # Calculate KPIs
+    kpis = compute_kpis(filtered_df)
+    
+    # Display KPIs
+    st.subheader("Key Performance Indicators")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Revenue", f"${kpis['total_revenue']:,.0f}")
+    with col2:
+        st.metric("Total Expenses", f"${kpis['total_expenses']:,.0f}")
+    with col3:
+        st.metric("Net Profit", f"${kpis['net_profit']:,.0f}")
+    with col4:
+        st.metric("Profit Margin", f"{kpis['profit_margin']:.1f}%")
+    
+    # Generate charts
+    st.subheader("Charts")
+    
+    # Revenue timeseries
+    revenue_chart = revenue_timeseries(filtered_df)
+    if revenue_chart:
+        st.plotly_chart(revenue_chart, use_container_width=True)
+    
+    # Expense breakdown
+    expense_chart = expense_breakdown(filtered_df)
+    if expense_chart:
+        st.plotly_chart(expense_chart, use_container_width=True)
+    
+    # Cost driver chart
+    cost_chart = cost_driver_by_department(filtered_df)
+    if cost_chart:
+        st.plotly_chart(cost_chart, use_container_width=True)
+    
+    # Data table
+    st.subheader("Filtered Data")
+    st.dataframe(filtered_df.head(100), use_container_width=True)
+    
+    # Download button
+    csv = filtered_df.to_csv(index=False)
+    st.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name="financial_data_filtered.csv",
+        mime="text/csv"
+    )
+    
+    # Summary statistics
+    st.subheader("Summary Statistics")
+    summary_stats = get_summary_stats(filtered_df)
+    
+    if summary_stats:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("**Revenue by Region**")
+            st.dataframe(summary_stats['region_stats']['Revenue'].round(2))
+        
+        with col2:
+            st.write("**Revenue by Department**")
+            st.dataframe(summary_stats['department_stats']['Revenue'].round(2))
 
 if __name__ == "__main__":
     main()
